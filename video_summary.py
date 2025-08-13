@@ -51,39 +51,48 @@ Transcript:
 def chunk_text(text, chunk_size=1500):
     return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
 
+def summarize_video(url):
+    try:
+        title = get_video_title(url)
+        
+        # Create safe folder
+        safe_title = re.sub(r'[\\/*?:"<>|]', "_", title)
+        folder_path = os.path.join("summaries", safe_title)
+        os.makedirs(folder_path, exist_ok=True)
+        print(f"\nVideo title: {title}")
+
+        audio_file = "audio.mp3"
+
+        print("Downloading audio...")
+        download_audio(url, audio_file)
+        print("Download complete.")
+
+        print("Transcribing audio with Whisper...")
+        transcript = transcribe_audio(audio_file)
+        print("\n--- Transcription ---\n")
+        print(transcript)
+
+        print("\nSummarizing transcript with LLaMA...")
+        chunks = chunk_text(transcript)
+        chunk_summaries = [summarize_with_llama(c, title) for c in chunks]
+        final_summary = summarize_with_llama("\n".join(chunk_summaries), title)
+
+        print("\n--- Summary ---\n")
+        print(final_summary)
+
+        #summary_file = os.path.join(folder_path, "summary.txt")
+        #with open(summary_file, "w", encoding="utf-8") as f:
+        #  f.write(final_summary)
+
+        # Optional: cleanup
+        if os.path.exists(audio_file):
+            os.remove(audio_file)
+
+        return final_summary
+    except Exception as e:
+        return f"Error during summarization: {e}"
+
 if __name__ == "__main__":
-    url = input("Enter YouTube video URL: ")
-    title = get_video_title(url)
-    
-    # Create safe folder
-    safe_title = re.sub(r'[\\/*?:"<>|]', "_", title)
-    folder_path = os.path.join("summaries", safe_title)
-    os.makedirs(folder_path, exist_ok=True)
-    print(f"\nVideo title: {title}")
-
-    audio_file = "audio.mp3"
-
-    print("Downloading audio...")
-    download_audio(url, audio_file)
-    print("Download complete.")
-
-    print("Transcribing audio with Whisper...")
-    transcript = transcribe_audio(audio_file)
-    print("\n--- Transcription ---\n")
-    print(transcript)
-
-    print("\nSummarizing transcript with LLaMA...")
-    chunks = chunk_text(transcript)
-    chunk_summaries = [summarize_with_llama(c, title) for c in chunks]
-    final_summary = summarize_with_llama("\n".join(chunk_summaries), title)
-
-    print("\n--- Summary ---\n")
-    print(final_summary)
-
-    summary_file = os.path.join(folder_path, "summary.txt")
-    with open(summary_file, "w", encoding="utf-8") as f:
-      f.write(final_summary)
-
-    # Optional: cleanup
-    if os.path.exists(audio_file):
-        os.remove(audio_file)
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" # Replace with a default video URL
+    summary = summarize_video(url)
+    print(summary)
